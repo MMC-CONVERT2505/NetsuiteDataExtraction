@@ -1,0 +1,766 @@
+/* ============================================================
+   NetSuite Data Extractor — visual system
+   Palette drawn from a columnar accounting ledger pad:
+   pale green field, red audit rules, blue-black ink.
+   ============================================================ */
+:root{
+  --paper:#F4F6F7;
+  --card:#FFFFFF;
+  --ink:#1E313D;
+  --ink-2:#46596A;
+  --ink-3:#7E8F98;
+  --rule:#DCE3E7;
+  --rule-soft:#E7ECEF;
+  --band:#EAF0F2;
+  --green:#36677D;
+  --green-2:#264759;
+  --green-tint:#DCE7EA;
+  --red:#B23B3B;
+  --red-tint:#F6E1DF;
+  --amber:#9C6F1E;
+  --amber-tint:#FBF0DA;
+
+  --r-sm:9px;
+  --r-md:13px;
+  --r-lg:20px;
+
+  --shadow-1:0 1px 0 rgba(30,49,61,.04), 0 1px 2px rgba(30,49,61,.05);
+  --shadow-2:0 2px 6px rgba(30,49,61,.06), 0 14px 32px rgba(30,49,61,.09);
+  --shadow-3:0 24px 64px rgba(30,49,61,.20);
+
+  --mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans:"Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+
+  --rail-w:290px;
+  --bar-h:60px;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.5;
+  font-weight:400;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+h1,h2,h3{margin:0;font-weight:500;letter-spacing:-.01em}
+p{margin:0}
+button{font:inherit;color:inherit}
+input,select{font:inherit;color:inherit}
+
+.hidden{display:none !important}
+
+/* ---------- shared type roles ---------- */
+.eyebrow{
+  font-family:var(--mono);
+  font-size:10.5px;
+  font-weight:500;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--ink-3);
+}
+.figure{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.display{
+  font-family:var(--sans);
+  font-weight:600;
+  letter-spacing:-.01em;
+  line-height:1.1;
+}
+
+/* ---------- focus ---------- */
+:focus{outline:none}
+:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--green);
+  border-radius:var(--r-sm);
+  position:relative;
+  z-index:3;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  padding:0 22px;height:46px;
+  border:1px solid transparent;border-radius:999px;
+  background:var(--green);color:#fff;
+  font-weight:600;font-size:15px;letter-spacing:.005em;
+  cursor:pointer;
+  transition:background .14s ease, transform .08s ease, box-shadow .14s ease;
+  box-shadow:var(--shadow-1);
+}
+.btn:hover{background:var(--green-2)}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{background:#DCE3E7;color:#7E8F98;cursor:not-allowed;box-shadow:none}
+.btn--lg{height:52px;padding:0 28px;font-size:16px}
+.btn--ghost{background:transparent;color:var(--ink);border-color:var(--rule);box-shadow:none}
+.btn--ghost:hover{background:#fff;border-color:#C5D0D6}
+.btn--quiet{background:transparent;color:var(--ink-2);border-color:transparent;box-shadow:none;padding:0 12px;height:38px;font-weight:500}
+.btn--quiet:hover{background:rgba(51,42,32,.06);color:var(--ink)}
+.btn--danger{background:transparent;color:var(--red);border-color:#E3CFCC;box-shadow:none}
+.btn--danger:hover{background:var(--red-tint)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn svg{width:17px;height:17px;flex:none}
+
+.linkish{
+  background:none;border:0;padding:0;cursor:pointer;
+  color:var(--green);font-weight:600;text-decoration:underline;
+  text-underline-offset:3px;text-decoration-thickness:1px;
+}
+.linkish:hover{color:var(--green-2)}
+
+/* ============================================================
+   App shell
+   ============================================================ */
+/* Pinned to exactly the viewport, never taller. With min-height the shell grew
+   past the screen and the page scrolled *as well as* .work, leaving two
+   scrollbars side by side. Only .work should ever scroll. */
+.app{
+  display:none;
+  height:100vh;
+  height:100dvh;
+  flex-direction:column;
+  overflow:hidden;
+}
+.app.is-on{display:flex}
+
+.topbar{
+  height:var(--bar-h);flex:none;
+  display:flex;align-items:center;gap:14px;
+  padding:0 18px 0 22px;
+  background:var(--card);
+  border-bottom:1px solid var(--rule);
+  position:sticky;top:0;z-index:40;
+}
+.brand{display:flex;align-items:center;gap:13px;min-width:0}
+.brand__mark{
+  display:flex;align-items:center;height:32px;
+  padding-right:14px;margin-right:1px;border-right:1px solid var(--rule);
+}
+.brand__mark img{display:block;height:26px;width:auto;border-radius:4px}
+.brand__tool{
+  font-family:var(--sans);font-size:16px;font-weight:500;letter-spacing:-.008em;
+  color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.topbar__spacer{flex:1}
+.topnav{display:flex;align-items:center;gap:2px}
+.topnav__btn{
+  display:inline-flex;align-items:center;gap:8px;
+  height:38px;padding:0 13px;
+  background:transparent;border:1px solid transparent;border-radius:var(--r-md);
+  font-size:14px;font-weight:500;color:var(--ink-2);cursor:pointer;
+  transition:background .14s ease,color .14s ease;
+}
+.topnav__btn:hover{background:var(--band);color:var(--ink)}
+.topnav__btn svg{width:17px;height:17px;flex:none;opacity:.85}
+.topbar__divider{width:1px;height:24px;background:var(--rule);margin:0 8px}
+
+/* ============================================================
+   Stage = ledger stub rail + work area
+   ============================================================ */
+.stage{flex:1;display:flex;align-items:stretch;min-height:0}
+
+/* ---------- SIGNATURE: the run sheet ---------- */
+.rail{
+  width:var(--rail-w);flex:none;
+  background:var(--card);
+  border-right:1px solid var(--rule);
+  padding:26px 0 26px 0;
+  position:relative;
+  overflow-y:auto;
+}
+.rail__head{padding:0 26px 18px 26px}
+.rail__title{margin-top:5px;font-size:15px;font-weight:600}
+.rail__sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+
+/* A vertical stepper: numbered badges that fill in as each step is reached and
+   turn to a tick once done. No connector line — the badges carry it alone. */
+.stub{list-style:none;margin:0;padding:0;position:relative}
+.stub__row{
+  position:relative;
+  display:grid;grid-template-columns:56px 1fr;
+  align-items:start;
+  padding:13px 26px 13px 0;
+}
+.stub__marker{
+  grid-column:1;justify-self:center;
+  width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--card);
+  border:2px solid var(--rule);
+  color:var(--ink-3);
+  position:relative;z-index:1;
+  flex:none;
+  transition:background .22s ease, border-color .22s ease, color .22s ease;
+}
+.stub__marker-num{
+  font-family:var(--mono);font-size:12px;font-weight:600;line-height:1;
+}
+.stub__marker-tick{
+  display:none;width:15px;height:15px;
+  fill:none;stroke:#fff;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;
+}
+
+.stub__body{padding-left:14px;min-width:0;padding-top:4px}
+.stub__label{font-size:14.5px;font-weight:600;color:var(--ink-3);letter-spacing:-.005em}
+.stub__entries{margin-top:6px;display:grid;gap:3px}
+.stub__entry{
+  font-family:var(--mono);font-size:11.5px;line-height:1.45;color:var(--ink-2);
+  overflow:hidden;text-overflow:ellipsis;
+}
+.stub__entry--muted{color:#7E8F98;font-style:italic;font-family:var(--sans);font-size:12.5px}
+
+/* Current step: solid accent badge with a soft ring to draw the eye. */
+.stub__row.is-current .stub__marker{
+  background:var(--green);border-color:var(--green);color:#fff;
+  box-shadow:0 0 0 4px var(--green-tint);
+}
+.stub__row.is-current .stub__label{color:var(--ink)}
+
+/* Completed step: filled badge, number swapped for a tick. */
+.stub__row.is-done .stub__marker{
+  background:var(--green);border-color:var(--green);
+}
+.stub__row.is-done .stub__marker-num{display:none}
+.stub__row.is-done .stub__marker-tick{display:block}
+.stub__row.is-done .stub__label{color:var(--ink-2)}
+
+.rail__foot{padding:20px 26px 0 26px;margin-top:6px;border-top:1px solid var(--rule-soft)}
+
+/* ============================================================
+   Work area
+   ============================================================ */
+.work{flex:1;min-width:0;overflow-y:auto}
+.work__inner{max-width:720px;margin:0 auto;padding:44px 32px 88px}
+
+.stepline{display:flex;align-items:center;gap:10px}
+.stepline__count{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--green)}
+.stepline__rule{flex:1;height:1px;background:var(--rule)}
+
+.h-step{font-size:38px;margin-top:16px;letter-spacing:-.015em;text-wrap:balance}
+.lede{margin-top:12px;font-size:16.5px;color:var(--ink-2);max-width:50ch;line-height:1.55}
+
+.panel{margin-top:28px}
+.panel__label{display:block;font-size:14.5px;font-weight:600;margin-bottom:4px}
+.panel__hint{font-size:13px;color:var(--ink-3);margin-bottom:12px;line-height:1.45}
+
+/* ---------- selectable cards (companies, record types) ---------- */
+.pick{display:grid;gap:8px}
+.pick__item{
+  position:relative;display:flex;align-items:flex-start;gap:13px;
+  padding:15px 16px;
+  background:var(--card);border:1px solid var(--rule);border-radius:var(--r-md);
+  cursor:pointer;
+  transition:border-color .13s ease, box-shadow .13s ease, background .13s ease;
+}
+.pick__item--flat{align-items:center;padding:14px 16px}
+.pick__item:hover{border-color:#C5D0D6}
+.pick__item:has(input:checked){
+  border-color:var(--green);
+  box-shadow:inset 0 0 0 1px var(--green), 0 1px 2px rgba(51,42,32,.06);
+  background:#F7FAFC;
+}
+.pick__item:has(input:focus-visible){box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--green)}
+.pick__item input{
+  appearance:none;-webkit-appearance:none;margin:2px 0 0 0;flex:none;
+  width:19px;height:19px;border:1.5px solid #B9C7CE;background:#fff;cursor:pointer;
+}
+.pick__item input[type=radio]{border-radius:50%}
+.pick__item--flat input{margin-top:0}
+.pick__item input[type=checkbox]{border-radius:4px}
+.pick__item input:checked{border-color:var(--green);background:var(--green)}
+.pick__item input[type=radio]:checked{box-shadow:inset 0 0 0 3.5px #fff}
+.pick__item input[type=checkbox]:checked{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5 10 17.5 19 6.5'/%3E%3C/svg%3E");
+  background-size:15px;background-position:center;background-repeat:no-repeat;
+}
+.pick__main{min-width:0;flex:1}
+.pick__name{display:block;font-size:15px;font-weight:600;letter-spacing:-.005em}
+.pick__meta{display:block;font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-top:5px}
+.pick__side{flex:none;align-self:center;padding-left:8px}
+
+/* ---------- record-type list: plain rows, small dark checkboxes ---------- */
+.typelist{display:grid;gap:2px}
+.typelist__item{
+  display:flex;align-items:center;gap:11px;
+  padding:9px 4px;cursor:pointer;border-radius:var(--r-sm);
+  transition:background .12s ease;
+}
+.typelist__item:hover{background:var(--band)}
+.typelist__item input{
+  appearance:none;-webkit-appearance:none;margin:0;flex:none;
+  width:17px;height:17px;border-radius:4px;
+  border:1.5px solid #9DAEB6;background:#fff;cursor:pointer;
+  transition:background .12s ease, border-color .12s ease;
+}
+.typelist__item input:checked{
+  background:var(--ink);border-color:var(--ink);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5 10 17.5 19 6.5'/%3E%3C/svg%3E");
+  background-size:12px;background-position:center;background-repeat:no-repeat;
+}
+.typelist__item input:focus-visible{
+  box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--green);
+}
+.typelist__name{font-size:14.5px;color:var(--ink);letter-spacing:-.005em}
+
+.tag{
+  display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;padding:3px 7px;border-radius:3px;
+  background:var(--band);color:var(--ink-2);white-space:nowrap;
+}
+.tag--sandbox{background:var(--amber-tint);color:var(--amber)}
+.tag--alert{background:var(--red-tint);color:var(--red)}
+
+/* ---------- dates ---------- */
+.dates{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.field{display:grid;gap:5px}
+.field__label{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.field__help{font-size:12.5px;color:var(--ink-3);line-height:1.45}
+.input,.select{
+  height:46px;padding:0 13px;
+  border:1px solid var(--rule);border-radius:var(--r-md);background:var(--card);
+  font-size:15px;min-width:0;
+}
+.input:hover,.select:hover{border-color:#C5D0D6}
+.input:focus-visible,.select:focus-visible{border-color:var(--green)}
+.input--date{font-family:var(--mono);font-size:14px;width:180px}
+.input--mono{font-family:var(--mono);font-size:13px}
+.select{width:100%;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236F8078' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9.5 12 15.5 18 9.5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;background-size:17px;
+  padding-right:38px;
+}
+/* ---------- custom dropdown ----------
+   A native <select> renders its option list with the operating system's own
+   styling — full-bleed width, bright system-blue highlight, no control over it.
+   This is a plain button + panel so the open state matches the rest of the app. */
+.combo{position:relative}
+.combo__btn{
+  width:100%;height:46px;padding:0 13px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border:1px solid var(--rule);border-radius:var(--r-md);background:var(--card);
+  font-size:15px;color:var(--ink);text-align:left;cursor:pointer;
+  transition:border-color .12s ease;
+}
+.combo__btn:hover{border-color:#C5D0D6}
+.combo.is-open .combo__btn{border-color:var(--green)}
+.combo__value{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.combo__caret{width:17px;height:17px;flex:none;color:var(--ink-3);transition:transform .16s ease}
+.combo.is-open .combo__caret{transform:rotate(180deg)}
+.combo__menu{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:20;
+  background:var(--card);border:1px solid var(--rule);border-radius:var(--r-md);
+  box-shadow:var(--shadow-2);
+  /* Long subsidiary lists scroll inside the panel instead of running down the page. */
+  max-height:280px;overflow-y:auto;
+  padding:5px;
+}
+.combo__opt{
+  display:block;width:100%;text-align:left;
+  padding:9px 11px;border:0;background:none;border-radius:var(--r-sm);
+  font-size:14px;color:var(--ink);cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.combo__opt:hover{background:var(--band)}
+.combo__opt.is-sel{background:var(--green-tint);color:var(--green-2);font-weight:600}
+
+.dates__arrow{height:46px;display:flex;align-items:center;color:var(--ink-3);font-family:var(--mono);font-size:14px}
+.echo{
+  margin-top:12px;padding:11px 14px;border-left:2px solid var(--green);
+  background:var(--green-tint);border-radius:0 var(--r-sm) var(--r-sm) 0;
+  font-size:13.5px;color:var(--green-2);
+}
+.echo .figure{font-weight:600}
+
+.copy-field{display:flex;gap:8px}
+.copy-field .input{flex:1;font-family:var(--mono);font-size:12.5px}
+.copy-field .btn{flex-shrink:0;white-space:nowrap;height:46px;padding:0 16px}
+
+/* ---------- action row ---------- */
+.actions{margin-top:34px;padding-top:22px;border-top:1px solid var(--rule);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.actions__note{font-size:13px;color:var(--ink-3);max-width:38ch}
+
+/* ---------- notices ---------- */
+.notice{
+  display:flex;gap:12px;padding:14px 16px;border-radius:var(--r-md);
+  border:1px solid var(--rule);background:var(--card);margin-bottom:20px;
+}
+.notice svg{width:19px;height:19px;flex:none;margin-top:1px}
+.notice__title{font-weight:600;font-size:14.5px}
+.notice__text{font-size:13.5px;color:var(--ink-2);margin-top:3px;line-height:1.5}
+.notice__text .linkish{font-size:13.5px}
+.notice--error{background:var(--red-tint);border-color:#EAD3D0}
+.notice--error svg{stroke:var(--red)}
+.notice--error .notice__title{color:var(--red)}
+.notice--info{background:var(--band);border-color:#DCE7EA}
+.notice--info svg{stroke:var(--green)}
+
+/* ============================================================
+   Step 3 — run progress
+   ============================================================ */
+.pulse{margin-top:26px}
+.pulse__top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+.pulse__what{font-size:14px;color:var(--ink-2)}
+.pulse__clock{font-size:13px;font-weight:600;color:var(--ink-3)}
+.pulse__track{height:7px;background:#DCE7EA;border-radius:99px;overflow:hidden;position:relative}
+.pulse__sweep{
+  position:absolute;top:0;bottom:0;left:-40%;width:40%;border-radius:99px;
+  background:linear-gradient(90deg, transparent, var(--green), transparent);
+  animation:sweep 1.6s ease-in-out infinite;
+}
+@keyframes sweep{
+  0%{left:-40%}
+  100%{left:100%}
+}
+/* Once NetSuite has told us the real total (it comes free on the first page
+   of the same ID query), swap the blind sweep for an actual fill. */
+.pulse__fill{
+  position:absolute;top:0;bottom:0;left:0;width:0%;border-radius:99px;
+  background:var(--green);
+  transition:width .5s ease;
+}
+.pulse__track:not(.is-determinate) .pulse__fill{display:none}
+.pulse__track.is-determinate .pulse__sweep{display:none}
+.pulse__total{display:flex;align-items:baseline;gap:8px;margin-top:14px}
+.pulse__total-num{font-size:26px;font-weight:600;color:var(--ink)}
+.pulse__total-label{font-size:13.5px;color:var(--ink-3)}
+
+.runlog{margin-top:24px;border:1px solid var(--rule);border-radius:var(--r-md);overflow:hidden;background:var(--card)}
+.runlog__head{
+  display:grid;grid-template-columns:1fr 138px 84px;gap:12px;
+  padding:10px 16px;background:var(--band);border-bottom:1px solid var(--rule);
+}
+.runlog__head span{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.runlog__head span:nth-child(2),.runlog__head span:nth-child(3){text-align:right}
+.runrow{
+  display:grid;grid-template-columns:1fr 138px 84px;gap:12px;align-items:center;
+  padding:13px 16px;border-bottom:1px solid var(--rule-soft);
+}
+.runrow:last-child{border-bottom:0}
+.runrow:nth-child(even){background:#F5F8FA}
+.runrow__name{font-size:14.5px;font-weight:500;display:flex;align-items:center;gap:9px}
+.runrow__rows{text-align:right;font-family:var(--mono);font-size:13.5px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.runrow__state{text-align:right;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.runrow.is-active .runrow__state{color:var(--amber)}
+.runrow.is-done .runrow__state{color:var(--green)}
+.dotspin{width:13px;height:13px;flex:none;border:2px solid #D6E0E4;border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.minitick{width:14px;height:14px;flex:none;stroke:var(--green);stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- files ---------- */
+.files{display:grid;gap:10px;margin-top:22px}
+.file{
+  display:flex;align-items:center;gap:15px;padding:16px;
+  border:1px solid var(--rule);border-radius:var(--r-md);background:var(--card);
+}
+.file__glyph{
+  width:44px;height:44px;flex:none;border-radius:var(--r-sm);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.04em;
+}
+.file__glyph--xlsx{background:var(--green-tint);color:var(--green)}
+.file__glyph--csv{background:var(--band);color:var(--ink-2)}
+.file__main{flex:1;min-width:0;text-align:left}
+.file__name{font-size:14.5px;font-weight:600;letter-spacing:-.005em;display:block}
+.file__filename{font-family:var(--mono);font-size:12.5px;font-weight:500;color:var(--ink-2);margin-top:4px;overflow-wrap:break-word;display:block}
+.file__specs{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink-3);margin-top:5px;white-space:nowrap;display:block}
+.file__dl{display:flex;gap:6px;flex:none}
+
+/* ---------- log output ---------- */
+.empty{
+  text-align:center;padding:46px 24px;border:1px dashed var(--rule);border-radius:var(--r-lg);background:var(--card);
+}
+.empty__title{font-size:16px;font-weight:600;margin-top:12px}
+.empty__text{font-size:14px;color:var(--ink-2);margin-top:6px;max-width:40ch;margin-inline:auto;line-height:1.5}
+
+/* ---------- ledger / history ---------- */
+.ledger{border:1px solid var(--rule);border-radius:var(--r-md);overflow:hidden;background:var(--card)}
+.ledger__row{padding:15px 16px;border-bottom:1px solid var(--rule-soft)}
+.ledger__row:nth-child(odd){background:var(--band)}
+.ledger__row:last-child{border-bottom:0}
+.ledger__top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.ledger__co{font-size:14.5px;font-weight:600}
+.ledger__when{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.ledger__what{font-size:13.5px;color:var(--ink-2);margin-top:4px;line-height:1.45}
+.ledger__foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}
+.ledger__rows{font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+.ledger__acts{display:flex;gap:6px}
+.minibtn{
+  height:32px;padding:0 13px;border:1px solid var(--rule);background:var(--card);
+  border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--ink-2);
+}
+.minibtn:hover{border-color:#C5D0D6;color:var(--ink)}
+
+/* ---------- companies ---------- */
+.colist{display:grid;gap:10px}
+.corow{
+  display:flex;align-items:center;gap:14px;padding:15px 16px;
+  background:var(--card);border:1px solid var(--rule);border-radius:var(--r-md);
+}
+.corow.is-confirm{background:var(--red-tint);border-color:var(--red)}
+.corow__main{flex:1;min-width:0}
+.corow__name{font-size:14.5px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.corow__meta{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-top:4px}
+.corow__confirm-text{flex:1;font-size:13.5px;color:var(--ink)}
+.corow__confirm-acts{display:flex;gap:8px;flex:none}
+
+/* ============================================================
+   Drawers
+   ============================================================ */
+.scrim{
+  position:fixed;inset:0;background:rgba(51,42,32,.32);
+  opacity:0;pointer-events:none;transition:opacity .22s ease;z-index:60;
+  backdrop-filter:blur(1.5px);
+}
+.scrim.is-on{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);
+  background:var(--paper);border-left:1px solid var(--rule);
+  transform:translateX(100%);transition:transform .28s cubic-bezier(.32,.72,.3,1);
+  z-index:61;display:flex;flex-direction:column;box-shadow:var(--shadow-3);
+}
+.drawer.is-on{transform:none}
+.drawer__head{
+  flex:none;display:flex;align-items:center;gap:14px;
+  padding:18px 20px;background:var(--card);border-bottom:1px solid var(--rule);
+}
+.drawer__title{font-size:17px;font-weight:600;flex:1}
+.iconbtn{
+  width:38px;height:38px;flex:none;display:flex;align-items:center;justify-content:center;
+  border:1px solid transparent;background:transparent;border-radius:var(--r-md);cursor:pointer;color:var(--ink-2);
+}
+.iconbtn:hover{background:var(--band);color:var(--ink)}
+.iconbtn svg{width:19px;height:19px}
+.drawer__body{flex:1;overflow-y:auto;padding:22px 20px 40px}
+
+/* ---------- "How to connect" guide (numbered walkthrough) ---------- */
+.guide{display:grid;gap:26px;position:relative}
+.guide__step{display:grid;grid-template-columns:30px 1fr;gap:14px;align-items:start}
+.guide__num{
+  width:30px;height:30px;border-radius:50%;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--green);color:#fff;
+  font-family:var(--mono);font-size:12.5px;font-weight:600;line-height:1;
+}
+.guide__body{min-width:0}
+.guide__title{font-size:15px;font-weight:600;letter-spacing:-.005em;margin-bottom:5px}
+.guide__text{font-size:13.5px;color:var(--ink-2);line-height:1.6}
+.guide__text + .guide__text{margin-top:7px}
+.guide__path{
+  font-family:var(--mono);font-size:12.5px;color:var(--ink);
+  background:var(--band);border:1px solid var(--rule);border-radius:var(--r-sm);
+  padding:9px 11px;margin:9px 0;overflow-wrap:anywhere;
+}
+.guide__warn{
+  margin-top:10px;padding:10px 12px;
+  background:var(--amber-tint);border-left:2px solid var(--amber);
+  border-radius:0 var(--r-sm) var(--r-sm) 0;
+  font-size:13px;color:#6E4E15;line-height:1.55;
+}
+.guide .copy-field .input{font-family:var(--mono);font-size:12.5px}
+
+/* ============================================================
+   Modal (add-company wizard)
+   ============================================================ */
+.modal{
+  position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;padding:22px;
+}
+.modal.is-on{display:flex}
+.modal__box{
+  width:min(600px,100%);max-height:min(86vh,760px);background:var(--paper);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-3);display:flex;flex-direction:column;overflow:hidden;
+  animation:pop .22s cubic-bezier(.2,1.1,.4,1);
+}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.985)}}
+.modal__head{flex:none;padding:18px 20px;background:var(--card);border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:14px}
+.modal__body{flex:1;overflow-y:auto;padding:24px 22px}
+.modal__foot{flex:none;padding:16px 20px;background:var(--card);border-top:1px solid var(--rule);display:flex;align-items:center;gap:10px}
+.modal__foot .btn--ghost{margin-right:auto}
+
+.wizsteps{display:flex;align-items:center;gap:8px;margin-bottom:20px}
+.wizdot{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.wizdot i{width:7px;height:7px;border-radius:50%;background:#D6E0E4;display:block}
+.wizdot.is-on{color:var(--green)}
+.wizdot.is-on i{background:var(--green)}
+.wizdot__line{flex:1;height:1px;background:var(--rule)}
+
+.formgrid{display:grid;gap:16px}
+.testbox{padding:16px;border-radius:var(--r-md);border:1px solid var(--rule);background:var(--card)}
+.testline{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:14px}
+.testline .figure{margin-left:auto;font-size:12.5px;color:var(--ink-3)}
+
+.helper-details{margin-bottom:4px;background:var(--band);border:1px solid var(--rule);border-radius:var(--r-md);padding:10px 14px}
+.helper-details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2);list-style:none}
+.helper-details summary::-webkit-details-marker{display:none}
+.helper-details summary::before{content:"▸";display:inline-block;margin-right:6px}
+.helper-details[open] summary::before{content:"▾"}
+.helper-details[open] summary{margin-bottom:8px}
+.helper-steps{margin:0;padding-left:18px;line-height:1.7;font-size:12.5px}
+
+/* ============================================================
+   Sign in
+   ============================================================ */
+/* Compact split card: a brand half carries the identity so the form half can
+   stay completely plain — nothing to read there but the two fields. */
+.signin{
+  min-height:100vh;display:none;align-items:center;justify-content:center;padding:24px;
+  background:radial-gradient(130% 110% at 50% 0%, #FFFFFF 0%, var(--band) 100%);
+}
+.signin.is-on{display:flex}
+
+/* ---- Sign-in exit: the two halves close together like a folder, the merged
+   card sinks away, and the app rises up behind it. ---- */
+.signin.is-leaving{pointer-events:none}
+.signin__brand,
+.signin__panel{
+  transition:transform .46s cubic-bezier(.65,0,.25,1), opacity .3s ease .12s;
+}
+.signin__box{
+  transition:transform .5s cubic-bezier(.55,0,.3,1), opacity .3s ease .22s;
+}
+/* Halves slide toward each other, overlapping into a single slab... */
+.signin.is-leaving .signin__brand{transform:translateX(56%)}
+.signin.is-leaving .signin__panel{transform:translateX(-56%);opacity:0}
+/* ...then that slab drops back and fades out. */
+.signin.is-leaving .signin__box{transform:scale(.9) translateY(14px);opacity:0}
+
+.app.is-entering{animation:app-rise .5s cubic-bezier(.2,.7,.3,1) both}
+@keyframes app-rise{
+  from{opacity:0;transform:translateY(14px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+
+.signin__box{
+  display:flex;
+  /* Side-by-side halves in a tall, near-square card — brand left, form right. */
+  width:min(720px,100%);
+  /* Never taller than the viewport allows, so short laptop screens still fit. */
+  min-height:min(560px, calc(100vh - 48px));
+  background:var(--card);
+  border:1px solid var(--rule);
+  border-radius:var(--r-lg);
+  box-shadow:var(--shadow-3);
+  overflow:hidden;
+}
+
+.signin__brand{
+  flex:1 1 45%;
+  /* Same family as the rest of the app, taken deeper: the accent teal sinking
+     into the ink used for body text, rather than the flat teal used elsewhere. */
+  background:linear-gradient(155deg, var(--green) 0%, var(--ink) 100%);
+  color:#fff;
+  padding:40px 34px;
+  display:flex;flex-direction:column;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.signin__chip{
+  position:relative;z-index:1;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:54px;height:54px;border-radius:14px;background:#fff;
+  box-shadow:0 6px 18px rgba(0,0,0,.18);margin-bottom:22px;
+}
+.signin__chip img{height:32px;width:auto;display:block}
+.signin__brandtitle{
+  position:relative;z-index:1;
+  font-size:28px;line-height:1.18;font-weight:700;letter-spacing:-.02em;
+}
+.signin__brandnote{
+  position:relative;z-index:1;
+  margin-top:11px;max-width:30ch;
+  font-size:13.5px;line-height:1.55;color:rgba(255,255,255,.7);
+}
+
+.signin__panel{
+  flex:1 1 55%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--card);padding:36px 34px;
+}
+.signin__form{width:min(300px,100%);display:grid;gap:14px}
+.signin__h{font-size:21px;font-weight:600;margin-bottom:2px}
+.signin__form .btn{margin-top:4px}
+.connects{
+  display:flex;align-items:center;gap:9px;margin-top:18px;
+  padding-top:16px;border-top:1px solid var(--rule);
+}
+.connects__label{font-size:12px;font-weight:500;color:var(--ink-3);letter-spacing:.01em}
+.connects img{height:18px;width:auto;display:block}
+
+/* Short screens: shrink the card rather than letting it run off the viewport. */
+@media (max-height:640px){
+  .signin__box{min-height:0}
+  .signin__brand{padding:28px 30px}
+  .signin__chip{width:44px;height:44px;border-radius:12px;margin-bottom:14px}
+  .signin__chip img{height:26px}
+  .signin__brandtitle{font-size:22px}
+  .signin__brandnote{display:none}
+  .signin__panel{padding:28px 30px}
+}
+
+/* Phones: the two halves stack, brand becoming a header strip. */
+@media (max-width:600px){
+  .signin{padding:16px}
+  .signin__box{flex-direction:column;width:100%;min-height:0}
+  .signin__brand{
+    flex:none;padding:22px 24px;
+    flex-direction:row;align-items:center;gap:14px;
+  }
+  .signin__chip{width:42px;height:42px;border-radius:11px;margin-bottom:0}
+  .signin__chip img{height:25px}
+  .signin__brandtitle{font-size:19px;line-height:1.25}
+  .signin__brandtitle br{display:none}
+  .signin__brandnote{display:none}
+  .signin__panel{flex:none;padding:28px 24px 32px}
+  .signin__form{width:100%}
+  /* Stacked layout folds vertically instead of sideways. */
+  .signin.is-leaving .signin__brand{transform:translateY(52%)}
+  .signin.is-leaving .signin__panel{transform:translateY(-52%);opacity:0}
+}
+.status{font-size:13px;color:var(--ink-3)}
+.status.err{color:var(--red)}
+.status.ok{color:var(--green)}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width:900px){
+  :root{--rail-w:250px}
+  .work__inner{padding:34px 24px 80px}
+}
+@media (max-width:760px){
+  .stage{flex-direction:column}
+  .rail{width:auto;border-right:0;border-bottom:1px solid var(--rule);padding:16px 0 4px}
+  .rail__head{padding:0 18px 12px}
+  .rail__foot{display:none}
+  .stub{display:flex;overflow-x:auto;scrollbar-width:none;padding:0 18px 16px;gap:10px}
+  /* Horizontal scroller on narrow screens: badge and text sit side by side. */
+  .stub__row{
+    grid-template-columns:auto 1fr;align-items:center;
+    border:1px solid var(--rule);border-radius:var(--r-md);
+    padding:11px 13px;min-width:200px;flex:none;
+  }
+  .stub__row.is-current{border-color:var(--green);background:var(--band)}
+  .stub__marker{width:26px;height:26px;justify-self:start}
+  .stub__marker-num{font-size:11px}
+  .stub__marker-tick{width:13px;height:13px}
+  .stub__body{padding-left:11px;padding-top:0}
+  .stub__row.is-current .stub__marker{box-shadow:none}
+  .h-step{font-size:29px}
+  .topbar{padding:0 10px 0 14px;gap:6px}
+  .topnav__btn span{display:none}
+  .topnav__btn{padding:0 10px}
+  .brand__tool{font-size:14px}
+  .runlog__head,.runrow{grid-template-columns:1fr 78px 74px;gap:8px;padding-inline:12px}
+  .runrow__rows{font-size:12.5px}
+  .input--date{width:100%}
+  .field--date{flex:1 1 140px}
+  .dates__arrow{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}

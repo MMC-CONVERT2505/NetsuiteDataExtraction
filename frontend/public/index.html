@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NetSuite Data Extractor — MMC Convert</title>
+    <link rel="icon" href="nlogosmall.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+
+    <!-- ============================================================
+         SIGN IN
+         ============================================================ -->
+    <div class="signin" id="signin">
+      <div class="signin__box">
+        <aside class="signin__brand">
+          <span class="signin__chip"><img src="nlogosmall.png" alt="MMC Convert" /></span>
+          <h1 class="signin__brandtitle">NetSuite<br />Data Extractor</h1>
+          <p class="signin__brandnote">Payments and journals, straight out of NetSuite.</p>
+        </aside>
+
+        <main class="signin__panel">
+          <div class="signin__form">
+            <h2 class="signin__h">Sign in</h2>
+            <div class="field">
+              <label class="field__label" for="si-user">Username</label>
+              <input class="input" id="si-user" type="text" autocomplete="username" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="si-pass">Password</label>
+              <input class="input" id="si-pass" type="password" autocomplete="current-password" />
+            </div>
+            <button class="btn btn--lg" id="si-go">Sign in</button>
+            <div class="status" id="si-status"></div>
+            <div class="connects">
+              <span class="connects__label">Connects to</span>
+              <img src="image.png" alt="NetSuite" />
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         APP
+         ============================================================ -->
+    <div class="app" id="app">
+
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand__mark"><img src="nlogosmall.png" alt="MMC Convert" /></span>
+          <span class="brand__tool">NetSuite Data Extractor</span>
+        </div>
+        <div class="topbar__spacer"></div>
+        <nav class="topnav">
+          <button class="topnav__btn" data-open="setup">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12"/><path d="M8 12h12"/><path d="M8 18h12"/><path d="M3.6 6h.01"/><path d="M3.6 12h.01"/><path d="M3.6 18h.01"/></svg>
+            <span>How to connect</span>
+          </button>
+          <button class="topnav__btn" data-open="history">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 12a8.8 8.8 0 1 0 2.6-6.2"/><path d="M3 4v4h4"/><path d="M12 7.5V12l3 1.8"/></svg>
+            <span>Export history</span>
+          </button>
+          <button class="topnav__btn" data-open="companies">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20V6.5A1.5 1.5 0 0 1 6.5 5h6A1.5 1.5 0 0 1 14 6.5V20"/><path d="M14 11h3.5A1.5 1.5 0 0 1 19 12.5V20"/><path d="M8 9h3M8 12.5h3M8 16h3"/></svg>
+            <span>Companies</span>
+          </button>
+          <div class="topbar__divider"></div>
+          <button class="topnav__btn" id="signout"><span>Sign out</span></button>
+        </nav>
+      </header>
+
+      <div class="stage">
+
+        <!-- ---------- SIGNATURE: run sheet ---------- -->
+        <aside class="rail" aria-label="Progress through this extract">
+          <ol class="stub" id="stub">
+            <li class="stub__row" data-stub="1">
+              <span class="stub__marker">
+                <span class="stub__marker-num">1</span>
+                <svg class="stub__marker-tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 10 17.5 19 6.5"/></svg>
+              </span>
+              <div class="stub__body">
+                <div class="stub__label">Connect</div>
+                <div class="stub__entries" id="stub-1"><div class="stub__entry stub__entry--muted">No company yet</div></div>
+              </div>
+            </li>
+            <li class="stub__row" data-stub="2">
+              <span class="stub__marker">
+                <span class="stub__marker-num">2</span>
+                <svg class="stub__marker-tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 10 17.5 19 6.5"/></svg>
+              </span>
+              <div class="stub__body">
+                <div class="stub__label">Choose your data</div>
+                <div class="stub__entries" id="stub-2"><div class="stub__entry stub__entry--muted">Not chosen yet</div></div>
+              </div>
+            </li>
+            <li class="stub__row" data-stub="3">
+              <span class="stub__marker">
+                <span class="stub__marker-num">3</span>
+                <svg class="stub__marker-tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 10 17.5 19 6.5"/></svg>
+              </span>
+              <div class="stub__body">
+                <div class="stub__label">Download</div>
+                <div class="stub__entries" id="stub-3"><div class="stub__entry stub__entry--muted">No file yet</div></div>
+              </div>
+            </li>
+          </ol>
+
+          <div class="rail__foot">
+            <button class="btn btn--quiet" id="startover" style="padding-left: 0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 12a8.8 8.8 0 1 0 2.6-6.2"/><path d="M3 4v4h4"/></svg>
+              Start over
+            </button>
+          </div>
+        </aside>
+
+        <!-- ---------- work area ---------- -->
+        <main class="work">
+          <div class="work__inner">
+
+            <!-- ===== STEP 1 ===== -->
+            <section id="step1" hidden>
+              <div class="stepline"><span class="stepline__count">Step 1 of 3</span><span class="stepline__rule"></span></div>
+              <h1 class="h-step display">Pick the company you're pulling from.</h1>
+
+              <div id="connect-error"></div>
+
+              <div class="panel">
+                <div class="pick" id="colist-pick"></div>
+                <p class="empty-state hidden" id="colist-empty" style="color: var(--ink-3); font-size: 13.5px; padding: 10px 0">No companies saved yet. Add one under <button class="linkish" data-open="companies">Companies</button>.</p>
+              </div>
+
+              <div class="actions">
+                <button class="btn btn--lg" id="btn-connect" disabled>
+                  <span id="btn-connect-label">Connect</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"/><path d="M13.5 6.5 19.5 12l-6 5.5"/></svg>
+                </button>
+                <p class="actions__note">Don't see the company you need? Add it under <button class="linkish" data-open="companies">Companies</button>.</p>
+              </div>
+            </section>
+
+            <!-- ===== STEP 2 ===== -->
+            <section id="step2" hidden>
+              <div class="stepline"><span class="stepline__count">Step 2 of 3</span><span class="stepline__rule"></span></div>
+              <h1 class="h-step display">Choose your dates and records.</h1>
+
+              <div class="panel">
+                <span class="panel__label">Company or location</span>
+                <p class="panel__hint">NetSuite calls these subsidiaries. Leave it as it is to get everything.</p>
+                <div class="combo" id="sub-combo">
+                  <button class="combo__btn" type="button" id="sub-btn" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="combo__value" id="sub-value">All companies and locations</span>
+                    <svg class="combo__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg>
+                  </button>
+                  <div class="combo__menu" id="sub-menu" role="listbox" hidden></div>
+                </div>
+                <div class="status" id="sub-status"></div>
+              </div>
+
+              <div class="panel">
+                <span class="panel__label">Dates to cover</span>
+                <div class="dates">
+                  <div class="field field--date">
+                    <label class="field__label" for="d-from">From</label>
+                    <input class="input input--date" type="date" id="d-from" />
+                  </div>
+                  <div class="dates__arrow">→</div>
+                  <div class="field field--date">
+                    <label class="field__label" for="d-to">To</label>
+                    <input class="input input--date" type="date" id="d-to" />
+                  </div>
+                </div>
+                <div class="echo" id="date-echo"></div>
+              </div>
+
+              <div class="panel">
+                <span class="panel__label">Records to include</span>
+                <div class="typelist" id="typelist"></div>
+              </div>
+
+              <div class="actions">
+                <button class="btn btn--lg" id="btn-extract" disabled>
+                  Export data
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"/><path d="M13.5 6.5 19.5 12l-6 5.5"/></svg>
+                </button>
+                <p class="actions__note" id="extract-note">Large date ranges take longer. You can leave this tab open and come back.</p>
+              </div>
+            </section>
+
+            <!-- ===== STEP 3 ===== -->
+            <section id="step3" hidden>
+              <div class="stepline"><span class="stepline__count">Step 3 of 3</span><span class="stepline__rule"></span></div>
+              <h1 class="h-step display" id="s3-title">Pulling your records.</h1>
+              <p class="lede" id="s3-lede">This usually takes a minute or two. Keep this tab open — we'll tell you the moment it's ready.</p>
+
+              <div id="s3-running">
+                <div class="pulse">
+                  <div class="pulse__top">
+                    <span class="pulse__what" id="meter-what" aria-live="polite">Starting up…</span>
+                    <span class="pulse__clock figure" id="run-clock">0:00</span>
+                  </div>
+                  <div class="pulse__track" id="pulse-track"><div class="pulse__sweep"></div><div class="pulse__fill" id="pulse-fill"></div></div>
+                  <div class="pulse__total">
+                    <span class="pulse__total-num figure" id="run-total">0</span>
+                    <span class="pulse__total-label" id="run-total-label">rows found so far</span>
+                  </div>
+                </div>
+
+                <div class="runlog">
+                  <div class="runlog__head"><span>Record type</span><span>Rows found</span><span>Status</span></div>
+                  <div id="runrows"></div>
+                </div>
+
+                <div class="corow" id="runstop-row" style="margin-top:20px">
+                  <span class="corow__main">
+                    <span class="corow__name">Started the wrong export?</span>
+                    <span class="corow__meta">Rows found so far stay saved — you can restart right away with different dates.</span>
+                  </span>
+                  <button class="btn btn--ghost" id="btn-stop-run" type="button" style="height:36px;padding:0 13px;font-size:13.5px">Stop this export</button>
+                </div>
+
+              </div>
+
+              <div id="s3-done" hidden>
+                <div class="notice notice--info" id="done-notice">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9.5 17 4.5 12"/></svg>
+                  <div>
+                    <div class="notice__title">Your data is ready</div>
+                    <div class="notice__text" id="done-summary"></div>
+                  </div>
+                </div>
+
+                <span class="panel__label">Download</span>
+                <p class="panel__hint">Each record type comes back as its own Excel spreadsheet.</p>
+                <div class="files" id="done-files"></div>
+
+                <div class="actions">
+                  <button class="btn" id="btn-again">Start another extract</button>
+                  <button class="btn btn--ghost" data-open="history">See export history</button>
+                </div>
+              </div>
+
+              <div id="s3-empty" hidden>
+                <div class="empty">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="width: 34px; height: 34px"><path d="M5 4.5h9l5 5V19a.5.5 0 0 1-.5.5h-13A.5.5 0 0 1 5 19V4.5Z"/><path d="M14 4.5v5.5h5"/><path d="M9 14h6"/></svg>
+                  <div class="empty__title" id="empty-title">No records in that date range</div>
+                  <div class="empty__text" id="empty-text">NetSuite returned nothing for these dates. Widen the range, or check whether the records sit under a different company or location.</div>
+                  <div style="margin-top: 18px"><button class="btn btn--ghost" id="btn-back2">Change dates and records</button></div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         DRAWERS
+         ============================================================ -->
+    <div class="scrim" id="scrim"></div>
+
+    <!-- SETUP GUIDE — how to connect a NetSuite company -->
+    <aside class="drawer" id="drawer-setup" aria-label="How to connect">
+      <div class="drawer__head">
+        <div class="drawer__title">How to connect a company</div>
+        <button class="iconbtn" data-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="drawer__body">
+        <div class="guide">
+          <div class="guide__step">
+            <span class="guide__num">1</span>
+            <div class="guide__body">
+              <div class="guide__title">Copy the Redirect URI</div>
+              <div class="copy-field" style="margin-top: 8px">
+                <input class="input" id="guide-redirect" type="text" readonly />
+                <button class="btn btn--ghost" id="guide-copy" type="button">Copy</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="guide__step">
+            <span class="guide__num">2</span>
+            <div class="guide__body">
+              <div class="guide__title">In NetSuite: Setup → Integration → Manage Integrations → New</div>
+              <p class="guide__text">Tick <strong>Authorization Code Grant</strong> and <strong>REST Web Services</strong>. Paste the Redirect URI from step 1.</p>
+            </div>
+          </div>
+
+          <div class="guide__step">
+            <span class="guide__num">3</span>
+            <div class="guide__body">
+              <div class="guide__title">Save, then copy the Client ID and Client Secret</div>
+              <div class="guide__warn">NetSuite shows the secret once. If you miss it, you'll need to start over.</div>
+            </div>
+          </div>
+
+          <div class="guide__step">
+            <span class="guide__num">4</span>
+            <div class="guide__body">
+              <div class="guide__title">Copy the Account ID from the browser address</div>
+              <p class="guide__path">https://<strong>1234567</strong>.app.netsuite.com/…</p>
+            </div>
+          </div>
+
+          <div class="guide__step">
+            <span class="guide__num">5</span>
+            <div class="guide__body">
+              <div class="guide__title">Add the company here</div>
+              <p class="guide__text">Paste all four values into <strong>Companies</strong>.</p>
+              <button class="btn" id="guide-open-companies" type="button" style="margin-top: 10px">Open Companies</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- HISTORY -->
+    <aside class="drawer" id="drawer-history" aria-label="Export history">
+      <div class="drawer__head">
+        <div class="drawer__title">Export history</div>
+        <button class="iconbtn" data-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="drawer__body">
+        <p style="font-size: 13.5px; color: var(--ink-3); margin-bottom: 16px" id="history-note">Connect to a company to see its past exports.</p>
+        <div class="ledger" id="historylist"></div>
+        <p class="empty-state hidden" id="history-empty" style="color: var(--ink-3); font-size: 13.5px; padding: 10px 0">No past exports found for this company yet.</p>
+      </div>
+    </aside>
+
+    <!-- COMPANIES -->
+    <aside class="drawer" id="drawer-companies" aria-label="Companies">
+      <div class="drawer__head">
+        <div class="drawer__title">Companies</div>
+        <button class="btn btn--ghost" id="btn-addco" style="height: 38px; padding: 0 14px; font-size: 14px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Add a company
+        </button>
+        <button class="iconbtn" data-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="drawer__body">
+        <div class="colist" id="companylist"></div>
+        <p class="empty-state hidden" id="companylist-empty" style="color: var(--ink-3); font-size: 13.5px; padding: 10px 0">No companies saved yet.</p>
+      </div>
+    </aside>
+
+    <!-- ============================================================
+         ADD-COMPANY WIZARD
+         ============================================================ -->
+    <div class="modal" id="wizard" role="dialog" aria-modal="true" aria-label="Add a company">
+      <div class="modal__box">
+        <div class="modal__head">
+          <div class="drawer__title">Add a company</div>
+          <button class="iconbtn" id="wiz-x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+        <div class="modal__body">
+          <div class="wizsteps">
+            <span class="wizdot is-on" data-wd="1"><i></i>Redirect URI</span><span class="wizdot__line"></span>
+            <span class="wizdot" data-wd="2"><i></i>Company</span><span class="wizdot__line"></span>
+            <span class="wizdot" data-wd="3"><i></i>Credentials</span>
+          </div>
+
+          <div class="wizpane" data-wp="1">
+            <h3 style="font-size: 19px; margin-bottom: 6px" class="display">Register this app in NetSuite.</h3>
+            <p class="field__help" style="margin-bottom: 16px; max-width: 52ch">First, register this app's Redirect URI in the new company's NetSuite account. This step is manual by NetSuite's own design — it can't be automated from here.</p>
+            <details class="helper-details">
+              <summary>Not sure how? Show the NetSuite setup steps</summary>
+              <ol class="helper-steps">
+                <li>NetSuite: <em>Setup &gt; Integration &gt; Manage Integrations &gt; New</em>. Enable "Authorization Code Grant" and "REST Web Services."</li>
+                <li>Paste the Redirect URI below into the Redirect URI field.</li>
+                <li>Save — NetSuite shows a <strong>Client ID</strong> and <strong>Client Secret</strong> right then. Copy both, they're never shown again.</li>
+                <li>Note the <strong>Account ID</strong> from the NetSuite URL (e.g. 1234567 or 1234567-sb1).</li>
+              </ol>
+            </details>
+            <div class="field" style="margin-top: 16px">
+              <label class="field__label" for="w-redirect">Redirect URI</label>
+              <div class="copy-field">
+                <input class="input" id="w-redirect" type="text" readonly />
+                <button class="btn btn--ghost" id="w-copy" type="button">Copy</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="wizpane" data-wp="2" hidden>
+            <h3 style="font-size: 19px; margin-bottom: 6px" class="display">Which company is this?</h3>
+            <p class="field__help" style="margin-bottom: 20px; max-width: 52ch">Give it a name the team will recognise, and its Account ID from the NetSuite URL.</p>
+            <div class="formgrid">
+              <div class="field">
+                <label class="field__label" for="w-name">Name shown in the list</label>
+                <input class="input" id="w-name" type="text" placeholder="e.g. Cascade Foods Group" />
+              </div>
+              <div class="field">
+                <label class="field__label" for="w-acct">Account ID</label>
+                <input class="input input--mono" id="w-acct" type="text" placeholder="e.g. 1234567 or 1234567-sb1" />
+              </div>
+            </div>
+            <div class="status" id="w-step2-status"></div>
+          </div>
+
+          <div class="wizpane" data-wp="3" hidden>
+            <h3 style="font-size: 19px; margin-bottom: 6px" class="display">Paste the credentials.</h3>
+            <p class="field__help" style="margin-bottom: 20px; max-width: 52ch">The Client ID and Client Secret NetSuite showed you when you saved the Integration Record in step 1.</p>
+            <div class="formgrid">
+              <div class="field">
+                <label class="field__label" for="w-cid">Client ID</label>
+                <input class="input input--mono" id="w-cid" type="text" />
+              </div>
+              <div class="field">
+                <label class="field__label" for="w-cs">Client Secret</label>
+                <input class="input input--mono" id="w-cs" type="password" />
+              </div>
+            </div>
+            <div class="status" id="w-step3-status"></div>
+          </div>
+        </div>
+        <div class="modal__foot">
+          <button class="btn btn--ghost" id="wiz-back" hidden>Back</button>
+          <button class="btn" id="wiz-next">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         GENERIC CONFIRM POPUP — reused for any "are you sure?" moment
+         ============================================================ -->
+    <div class="modal" id="confirm-modal" role="dialog" aria-modal="true" aria-label="Confirm">
+      <div class="modal__box" style="width: min(420px, 100%)">
+        <div class="modal__head">
+          <div class="drawer__title" id="confirm-title">Are you sure?</div>
+        </div>
+        <div class="modal__body">
+          <p class="field__help" id="confirm-text" style="margin: 0"></p>
+        </div>
+        <div class="modal__foot">
+          <button class="btn btn--ghost" id="confirm-cancel" type="button">Cancel</button>
+          <button class="btn btn--danger" id="confirm-ok" type="button">Yes</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

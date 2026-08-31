@@ -1,0 +1,12 @@
+.env
+.ns-lock
+orgs.json
+keys/
+*.pem
+exports/
+logs/
+node_modules/
+backend/data.db
+
+# Old superseded scripts kept locally for reference — not part of the app.
+archive/

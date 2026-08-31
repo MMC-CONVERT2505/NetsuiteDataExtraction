@@ -1,0 +1,26 @@
+{
+  "defaults": {
+    "startDate": "2026-01-01",
+    "endDate": "2026-01-31",
+    "paymentTypes": ["vendorpayment"],
+    "scope": "rest_webservices"
+  },
+  "orgs": [
+    {
+      "name": "mmcc-prod",
+      "accountId": "PUT_ACCOUNT_ID_HERE",
+      "clientId": "PUT_CLIENT_ID_HERE",
+      "clientSecret": "PUT_CLIENT_SECRET_HERE",
+      "certificateId": "PUT_CERTIFICATE_ID_HERE",
+      "privateKeyPath": "./keys/mmcc_private_key.pem"
+    },
+    {
+      "name": "org2",
+      "accountId": "TSTDRV1234567",
+      "clientId": "PUT_CLIENT_ID_HERE",
+      "certificateId": "PUT_CERTIFICATE_ID_HERE",
+      "privateKeyPath": "./keys/org2_private_key.pem",
+      "paymentTypes": ["vendorpayment", "customerpayment"]
+    }
+  ]
+}

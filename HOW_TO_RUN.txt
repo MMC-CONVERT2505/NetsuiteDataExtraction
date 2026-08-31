@@ -1,0 +1,97 @@
+===============================================================
+ NetSuite Data Extraction - How To Run
+===============================================================
+
+Open PowerShell in the project folder:
+    C:\Users\ACER\Desktop\net suite try 11
+
+You need TWO windows - one for the backend, one for the frontend.
+Both must stay open while the tool is in use.
+
+
+---------------------------------------------------------------
+ 1. START THE TOOL
+---------------------------------------------------------------
+
+WINDOW 1 - Backend (the API):
+    node backend\backend.js
+
+    Wait for:  Backend API running at http://127.0.0.1:9090
+
+WINDOW 2 - Frontend (the web page):
+    node frontend\frontend-server.js
+
+    Wait for:  Frontend UI running at http://127.0.0.1:9191
+
+Then open in your browser:
+    http://127.0.0.1:9191
+
+Login is in the .env file (APP_USERNAME / APP_PASSWORD).
+
+
+---------------------------------------------------------------
+ 2. STOP THE TOOL
+---------------------------------------------------------------
+
+Press Ctrl+C in each window.
+
+If a window is gone but the app is still running, find it:
+    Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
+        Select-Object ProcessId, CommandLine | Format-List
+
+Then stop it by its number:
+    Stop-Process -Id <ProcessId> -Force
+
+
+---------------------------------------------------------------
+ 3. IF SOMETHING GOES WRONG
+---------------------------------------------------------------
+
+"Another export is already running"
+    An old export is stuck. List the processes (command above),
+    find the one ending in  netsuite-export.js , and stop it.
+    Then restart the backend.
+
+"This site can't be reached"
+    A window was closed. Start both again (section 1).
+
+Page loads but nothing works / stuck on login
+    The backend is not running. Start Window 1 again.
+
+Export stops and rows stop counting
+    Run the SAME export again - same company, same dates.
+    It resumes where it stopped and keeps what it already saved.
+
+Changed something in frontend\public\ (page, styles)
+    Just refresh the browser. No restart needed.
+
+Changed backend\backend.js
+    Restart Window 1 only.
+
+
+---------------------------------------------------------------
+ 4. FIRST TIME ON A NEW MACHINE
+---------------------------------------------------------------
+
+    npm install
+
+Only needed once, or if node_modules is missing/deleted.
+
+
+---------------------------------------------------------------
+ 5. GOOD TO KNOW
+---------------------------------------------------------------
+
+- Ports: backend 9090, frontend 9191 (set in .env)
+- Only ONE export can run at a time.
+- Finished files are saved in:  backend\exports\
+  You can also re-download them any time from the
+  "Export history" button in the app.
+- The tool only READS from NetSuite. It never changes
+  anything in a client's account.
+- Big date ranges take a long time. This is NetSuite's
+  own speed limit, not the tool.
+- Do NOT delete the  backend\exports\progress\  folder while
+  an export is running - that is what lets it resume.
+
+===============================================================

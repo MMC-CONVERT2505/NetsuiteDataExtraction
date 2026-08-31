@@ -1,0 +1,23 @@
+{
+  "name": "netsuite-exporter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fast NetSuite payment exporter",
+  "main": "backend/netsuite-export.js",
+  "scripts": {
+    "start": "node backend/netsuite-export.js",
+    "web:backend": "node backend/backend.js",
+    "web:frontend": "node frontend/frontend-server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "axios": "^1.8.2",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "oauth-1.0a": "^2.2.6",
+    "p-limit": "^6.2.0",
+    "xlsx": "^0.18.5"
+  }
+}
