@@ -7,6 +7,11 @@
 const API_BASE = window.location.port
   ? window.location.protocol + "//" + window.location.hostname + ":9090"
   : "";
+// API_BASE is deliberately relative ("") in production so fetch() calls stay
+// same-origin. The Redirect URI shown to paste into NetSuite needs a full,
+// absolute URL no matter what — a bare "/api/auth/callback" is not something
+// NetSuite will accept there.
+const ABSOLUTE_API_BASE = API_BASE || window.location.origin;
 let authToken = localStorage.getItem("appAuthToken") || "";
 
 const TYPES = [
@@ -1054,7 +1059,7 @@ function openWizard() {
   $("#w-cs").value = "";
   $("#w-step2-status").textContent = "";
   $("#w-step3-status").textContent = "";
-  $("#w-redirect").value = `${API_BASE}/api/auth/callback`;
+  $("#w-redirect").value = `${ABSOLUTE_API_BASE}/api/auth/callback`;
   renderWiz();
   $("#wizard").classList.add("is-on");
   $("#scrim").classList.add("is-on");
@@ -1328,7 +1333,7 @@ $("#w-copy").addEventListener("click", async () => {
 
 // "How to connect" guide: same Redirect URI the add-company wizard shows, so
 // someone can read the whole setup before starting the wizard.
-$("#guide-redirect").value = `${API_BASE}/api/auth/callback`;
+$("#guide-redirect").value = `${ABSOLUTE_API_BASE}/api/auth/callback`;
 $("#guide-copy").addEventListener("click", async () => {
   const input = $("#guide-redirect");
   const btn = $("#guide-copy");
