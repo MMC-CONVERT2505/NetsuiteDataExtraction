@@ -392,20 +392,6 @@ function withOrgsWriteLock(mutator) {
   return run;
 }
 
-function keyFilePathForOrg(orgName, existingPrivateKeyPath) {
-  if (existingPrivateKeyPath) return existingPrivateKeyPath;
-  const slug = slugify(orgName);
-  const keysDir = path.resolve(ROOT, "keys");
-  fs.mkdirSync(keysDir, { recursive: true });
-  let fileName = `${slug}_private_key.pem`;
-  let n = 2;
-  while (fs.existsSync(path.join(keysDir, fileName))) {
-    fileName = `${slug}_private_key_${n}.pem`;
-    n++;
-  }
-  return `keys/${fileName}`;
-}
-
 function requireField(org, fieldName) {
   const value = org[fieldName];
   if (!String(value || "").trim()) {
@@ -771,58 +757,6 @@ app.get("/api/orgs", (req, res) => {
   }
 });
 
-app.post("/api/orgs", async (req, res) => {
-  if (RUNTIME_ONLY_MODE) {
-    return runtimeOnlyDisabled(res);
-  }
-  try {
-    const candidate = createRuntimeOrg(req.body || {});
-    await testOrgConnection(candidate);
-
-    const result = await withOrgsWriteLock(() => {
-      const config = readOrgsConfig();
-      const orgs = config.orgs || [];
-      const idx = orgs.findIndex((o) => String(o.name || "") === candidate.name);
-      const upsert = Boolean(req.body?.upsert);
-      if (idx >= 0 && !upsert) {
-        const err = new Error(
-          `An org named "${candidate.name}" already exists. Retry with upsert:true to overwrite its saved credentials.`
-        );
-        err.statusCode = 409;
-        throw err;
-      }
-      const existingPath = idx >= 0 ? orgs[idx].privateKeyPath : "";
-      const privateKeyPath = keyFilePathForOrg(candidate.name, existingPath);
-      fs.writeFileSync(
-        path.resolve(ROOT, privateKeyPath),
-        candidate.privateKeyPem.replace(/\\n/g, "\n"),
-        { mode: 0o600 }
-      );
-
-      const record = {
-        name: candidate.name,
-        accountId: candidate.accountId,
-        clientId: candidate.clientId,
-        certificateId: candidate.certificateId,
-        privateKeyPath,
-        scope: candidate.scope,
-        authMethod: "m2m"
-      };
-      if (candidate.tokenUrl) record.tokenUrl = candidate.tokenUrl;
-
-      if (idx >= 0) orgs[idx] = record;
-      else orgs.push(record);
-      config.orgs = orgs;
-      writeOrgsConfig(config);
-      return { name: record.name, accountId: record.accountId, created: idx < 0, privateKeyPath };
-    });
-
-    res.json({ ok: true, ...result });
-  } catch (error) {
-    res.status(error.statusCode || 400).json({ ok: false, error: error.message });
-  }
-});
-
 // Saves a company that authenticates via OAuth 2.0 Authorization Code Grant
 // (interactive NetSuite login) instead of a certificate. No certificate/private
 // key needed, but a human has to click "Login with NetSuite" the first time
@@ -909,28 +843,6 @@ app.delete("/api/orgs/:name", async (req, res) => {
     res.json({ ok: true, removed: result });
   } catch (error) {
     res.status(error.statusCode || 400).json({ ok: false, error: error.message });
-  }
-});
-
-app.post("/api/connect", async (req, res) => {
-  if (RUNTIME_ONLY_MODE) {
-    return runtimeOnlyDisabled(res);
-  }
-  try {
-    const orgName = String(req.body?.orgName || "");
-    const { org } = getOrgByName(orgName);
-    const accessToken = await testOrgConnection(org);
-    const farmResult = await fetchFarmsForOrg(org, accessToken);
-    const files = exportsDb.listExportsForOrgSlug(slugify(orgName));
-    res.json({
-      ok: true,
-      files,
-      farms: farmResult.farms,
-      farmSource: farmResult.source,
-      farmWarning: farmResult.warning
-    });
-  } catch (error) {
-    res.status(400).json({ ok: false, error: error.message });
   }
 });
 
@@ -1168,7 +1080,6 @@ app.post("/api/export", async (req, res) => {
 
     const { org } = getOrgByName(orgName);
     const accountId = requireField(org, "accountId");
-    const scope = String(org.scope || "rest_webservices");
 
     const jobId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const logs = [];
@@ -1243,30 +1154,28 @@ app.post("/api/export", async (req, res) => {
       env.NS_DEPOSITAPP_MAX_CONCURRENCY = String(depositappMaxConcurrency);
     }
 
-    if (connectionMode === "interactive") {
-      const accessToken = await getValidInteractiveAccessToken(orgName);
-      if (!accessToken) {
-        return res.status(400).json({ ok: false, error: "NetSuite login expired. Login again." });
-      }
-      env.NS_OAUTH2_ACCESS_TOKEN = accessToken;
-      // A NetSuite access token only lives ~60 minutes, and a big export easily
-      // runs longer than that. Hand the child the refresh credentials as well so
-      // it can renew mid-run; without them every request past the first hour
-      // 401s, and the export keeps "completing" records while writing no rows.
-      const session = interactiveAuthByOrg.get(orgName);
-      if (session?.refreshToken) {
-        env.NS_OAUTH2_REFRESH_TOKEN = session.refreshToken;
-        env.NS_OAUTH2_CLIENT_ID = requireField(org, "clientId");
-        env.NS_OAUTH2_CLIENT_SECRET = requireField(org, "clientSecret");
-      }
-    } else {
-      const clientId = requireField(org, "clientId");
-      const certificateId = requireField(org, "certificateId");
-      const privateKeyPath = requireField(org, "privateKeyPath");
-      env.NS_OAUTH2_CLIENT_ID = clientId;
-      env.NS_OAUTH2_CERTIFICATE_ID = certificateId;
-      env.NS_OAUTH2_PRIVATE_KEY_PATH = privateKeyPath;
-      env.NS_OAUTH2_SCOPE = scope;
+    // Login with NetSuite (OAuth2 Authorization Code Grant) is the only
+    // supported connection method — certificate/private-key auth was removed.
+    if (connectionMode !== "interactive") {
+      return res.status(400).json({
+        ok: false,
+        error: `"${orgName}" is not connected via Login with NetSuite. Remove it and add it again through that flow.`
+      });
+    }
+    const accessToken = await getValidInteractiveAccessToken(orgName);
+    if (!accessToken) {
+      return res.status(400).json({ ok: false, error: "NetSuite login expired. Login again." });
+    }
+    env.NS_OAUTH2_ACCESS_TOKEN = accessToken;
+    // A NetSuite access token only lives ~60 minutes, and a big export easily
+    // runs longer than that. Hand the child the refresh credentials as well so
+    // it can renew mid-run; without them every request past the first hour
+    // 401s, and the export keeps "completing" records while writing no rows.
+    const session = interactiveAuthByOrg.get(orgName);
+    if (session?.refreshToken) {
+      env.NS_OAUTH2_REFRESH_TOKEN = session.refreshToken;
+      env.NS_OAUTH2_CLIENT_ID = requireField(org, "clientId");
+      env.NS_OAUTH2_CLIENT_SECRET = requireField(org, "clientSecret");
     }
     if (farmId) {
       env.NS_SUBSIDIARY_ID = farmId;
@@ -1583,17 +1492,11 @@ app.get("/api/netsuite/files", async (req, res) => {
   }
   try {
     const orgName = String(req.query.orgName || "");
-    const connectionMode = String(req.query.connectionMode || "interactive").toLowerCase();
     const { org } = getOrgByName(orgName);
 
-    let accessToken = "";
-    if (connectionMode === "interactive") {
-      accessToken = await getValidInteractiveAccessToken(orgName);
-      if (!accessToken) {
-        return res.status(401).json({ ok: false, error: "NetSuite login expired. Login again." });
-      }
-    } else {
-      accessToken = await testOrgConnection(org);
+    const accessToken = await getValidInteractiveAccessToken(orgName);
+    if (!accessToken) {
+      return res.status(401).json({ ok: false, error: "NetSuite login expired. Login again." });
     }
 
     const files = await fetchFileCabinetFiles(org, accessToken);

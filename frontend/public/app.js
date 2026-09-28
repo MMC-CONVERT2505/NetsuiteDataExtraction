@@ -425,46 +425,23 @@ function showConnectError(message) {
   wrap.appendChild(notice);
 }
 
+// Login with NetSuite (OAuth2 Authorization Code Grant) is the only supported
+// connection method — certificate/private-key auth was removed, so every
+// saved company redirects through NetSuite's login page. finishInteractiveConnect()
+// picks up the result once NetSuite sends the browser back.
 async function doConnect() {
   const selected = $('input[name="company"]:checked');
   if (!selected) return;
   const orgName = selected.value;
   $("#connect-error").innerHTML = "";
 
-  if (orgAuthMethods[orgName] === "interactive") {
-    window.location.href = `${API_BASE}/api/auth/login?orgName=${encodeURIComponent(orgName)}`;
+  if (orgAuthMethods[orgName] !== "interactive") {
+    showConnectError(
+      `"${orgName}" isn't connected via Login with NetSuite yet. Remove it under Companies and add it again.`
+    );
     return;
   }
-
-  const btn = $("#btn-connect");
-  const label = $("#btn-connect-label");
-  btn.disabled = true;
-  label.textContent = "Connecting…";
-  try {
-    const resp = await apiFetch("/api/connect", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orgName })
-    });
-    const data = await resp.json();
-    if (!resp.ok || !data.ok) {
-      showConnectError(data.error || "Unknown error.");
-      return;
-    }
-    state.companyName = orgName;
-    state.connected = true;
-    state.farms = data.farms || [];
-    state.farmSource = data.farmSource || "";
-    state.farmWarning = data.farmWarning || "";
-    state.results = null;
-    saveSession();
-    goStep(2);
-  } catch (error) {
-    showConnectError(error.message);
-  } finally {
-    btn.disabled = orgs.length === 0;
-    label.textContent = "Connect";
-  }
+  window.location.href = `${API_BASE}/api/auth/login?orgName=${encodeURIComponent(orgName)}`;
 }
 
 async function finishInteractiveConnect(orgName) {
