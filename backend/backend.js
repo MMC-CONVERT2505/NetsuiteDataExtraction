@@ -24,7 +24,7 @@ const ORGS_FILE = process.env.NS_ORGS_FILE || "orgs.json";
 // flushed automatically. See backfillAndFlushExports() below.
 const EXPORTS_DIR = path.resolve(ROOT, "exports");
 const PROGRESS_DIR = path.resolve(EXPORTS_DIR, "progress");
-const EXPORT_RETENTION_DAYS = 3;
+const EXPORT_RETENTION_DAYS = 30;
 fs.mkdirSync(EXPORTS_DIR, { recursive: true });
 fs.mkdirSync(PROGRESS_DIR, { recursive: true });
 const UI_BASE_URL = process.env.UI_BASE_URL || `http://localhost:${UI_PORT}`;
