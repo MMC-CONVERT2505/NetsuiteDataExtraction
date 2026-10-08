@@ -16,6 +16,9 @@ const HOST = process.env.HOST || "127.0.0.1";
 // so paths resolve correctly no matter where `node backend.js` is launched from.
 const ROOT = __dirname;
 
+// Companies now live in the database (see db.js's orgs table), not this file —
+// it's only read once at startup to import anything left over from before
+// that change. See migrateOrgsJsonIfNeeded() below.
 const ORGS_FILE = process.env.NS_ORGS_FILE || "orgs.json";
 // exports/ is now only a transient working folder — the export script writes
 // CSVs there while a run is in progress (needed so an interrupted run can
@@ -69,7 +72,6 @@ const interactiveAuthByOrg = new Map();
 const pendingAuthStates = new Map();
 const runtimeProfiles = new Map();
 const RUNTIME_ONLY_MODE = false;
-let orgsWriteChain = Promise.resolve();
 
 // --- App login (gates use of the whole tool, separate from NetSuite's own OAuth) ---
 const APP_USERNAME = String(process.env.APP_USERNAME || "");
@@ -200,14 +202,6 @@ function updateJobProgress(progress, text) {
     : 0;
 }
 
-function readOrgsConfig() {
-  const absPath = path.resolve(ROOT, ORGS_FILE);
-  if (!fs.existsSync(absPath)) {
-    throw new Error(`Orgs config not found: ${absPath}`);
-  }
-  return JSON.parse(fs.readFileSync(absPath, "utf8"));
-}
-
 // Moves one just-finished job's output files into the database and deletes
 // them from disk. Only ever called for a job that reached "completed" — a
 // failed/interrupted run's files stay on disk untouched, since those are
@@ -244,13 +238,13 @@ function migrateJobFilesToDb(job) {
 // company's history until they age out via retention.
 function guessOrgSlugForFilename(lowerName) {
   try {
-    const orgs = (readOrgsConfig().orgs || []);
+    const orgs = exportsDb.listOrgs();
     for (const org of orgs) {
       const slug = slugify(org.name);
       if (slug && lowerName.includes(slug)) return slug;
     }
   } catch {
-    // orgs.json missing/unreadable — fall through
+    // fall through
   }
   return "unknown";
 }
@@ -369,27 +363,11 @@ function backfillAndFlushExports() {
 }
 
 function getOrgByName(orgName) {
-  const config = readOrgsConfig();
-  const org = (config.orgs || []).find((o) => String(o.name || "") === String(orgName || ""));
+  const org = exportsDb.getOrg(String(orgName || ""));
   if (!org) {
     throw new Error(`Org not found: ${orgName}`);
   }
-  return { org, defaults: config.defaults || {} };
-}
-
-function writeOrgsConfig(config) {
-  const absPath = path.resolve(ROOT, ORGS_FILE);
-  const tmpPath = `${absPath}.tmp-${process.pid}-${Date.now()}`;
-  fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2) + "\n", { mode: 0o600 });
-  fs.renameSync(tmpPath, absPath);
-}
-
-// Serializes read-modify-write access to orgs.json within this process only.
-// Does not protect against a second backend instance or a manual edit happening at the same time.
-function withOrgsWriteLock(mutator) {
-  const run = orgsWriteChain.then(mutator, mutator);
-  orgsWriteChain = run.then(() => {}, () => {});
-  return run;
+  return { org };
 }
 
 function requireField(org, fieldName) {
@@ -745,8 +723,7 @@ app.get("/api/orgs", (req, res) => {
     return runtimeOnlyDisabled(res);
   }
   try {
-    const config = readOrgsConfig();
-    const orgs = (config.orgs || []).map((org) => ({
+    const orgs = exportsDb.listOrgs().map((org) => ({
       name: org.name,
       accountId: org.accountId,
       authMethod: org.authMethod === "interactive" ? "interactive" : "m2m"
@@ -778,42 +755,32 @@ app.post("/api/orgs/interactive", async (req, res) => {
     if (!clientId) throw new Error("clientId is required.");
     if (!clientSecret) throw new Error("clientSecret is required.");
 
-    const result = await withOrgsWriteLock(() => {
-      const config = readOrgsConfig();
-      const orgs = config.orgs || [];
-      const idx = orgs.findIndex((o) => String(o.name || "") === orgName);
-      const upsert = Boolean(req.body?.upsert);
-      if (idx >= 0 && !upsert) {
-        const err = new Error(
-          `An org named "${orgName}" already exists. Retry with upsert:true to overwrite its saved credentials.`
-        );
-        err.statusCode = 409;
-        throw err;
-      }
+    const existing = exportsDb.getOrg(orgName);
+    const upsert = Boolean(req.body?.upsert);
+    if (existing && !upsert) {
+      const err = new Error(
+        `An org named "${orgName}" already exists. Retry with upsert:true to overwrite its saved credentials.`
+      );
+      err.statusCode = 409;
+      throw err;
+    }
 
-      const record = {
-        name: orgName,
-        accountId,
-        clientId,
-        clientSecret,
-        scope,
-        authMethod: "interactive"
-      };
-      if (redirectUri) record.redirectUri = redirectUri;
-
-      if (idx >= 0) orgs[idx] = record;
-      else orgs.push(record);
-      config.orgs = orgs;
-      writeOrgsConfig(config);
-      return { name: record.name, accountId: record.accountId, created: idx < 0 };
+    exportsDb.upsertOrg({
+      name: orgName,
+      accountId,
+      clientId,
+      clientSecret,
+      scope,
+      authMethod: "interactive",
+      redirectUri
     });
 
     res.json({
       ok: true,
-      ...result,
-      redirectUriUsed: result && req.body?.redirectUri
-        ? req.body.redirectUri
-        : `${PUBLIC_API_BASE_URL}/api/auth/callback`
+      name: orgName,
+      accountId,
+      created: !existing,
+      redirectUriUsed: redirectUri || `${PUBLIC_API_BASE_URL}/api/auth/callback`
     });
   } catch (error) {
     res.status(error.statusCode || 400).json({ ok: false, error: error.message });
@@ -826,21 +793,13 @@ app.delete("/api/orgs/:name", async (req, res) => {
   }
   try {
     const targetName = String(req.params.name || "");
-    const result = await withOrgsWriteLock(() => {
-      const config = readOrgsConfig();
-      const orgs = config.orgs || [];
-      const idx = orgs.findIndex((o) => String(o.name || "") === targetName);
-      if (idx < 0) {
-        const err = new Error(`Org not found: ${targetName}`);
-        err.statusCode = 404;
-        throw err;
-      }
-      orgs.splice(idx, 1);
-      config.orgs = orgs;
-      writeOrgsConfig(config);
-      return targetName;
-    });
-    res.json({ ok: true, removed: result });
+    const removed = exportsDb.deleteOrg(targetName);
+    if (!removed) {
+      const err = new Error(`Org not found: ${targetName}`);
+      err.statusCode = 404;
+      throw err;
+    }
+    res.json({ ok: true, removed: targetName });
   } catch (error) {
     res.status(error.statusCode || 400).json({ ok: false, error: error.message });
   }
@@ -1565,6 +1524,39 @@ app.get("/api/files/download", (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 });
+
+// One-time catch-up for a server that still has the old orgs.json file (or
+// got one copied onto it by hand) — imports it into the database, once, so
+// it's never needed again afterward. Certificate/private-key entries are
+// skipped on purpose since that auth method was removed; only "Login with
+// NetSuite" companies carry over. A fresh server with neither the file nor
+// any DB rows just starts with zero companies — no error, nothing to copy.
+function migrateOrgsJsonIfNeeded() {
+  if (exportsDb.countOrgs() > 0) return;
+  const absPath = path.resolve(ROOT, ORGS_FILE);
+  if (!fs.existsSync(absPath)) return;
+  try {
+    const config = JSON.parse(fs.readFileSync(absPath, "utf8"));
+    const orgs = (config.orgs || []).filter((o) => o.authMethod === "interactive");
+    for (const org of orgs) {
+      exportsDb.upsertOrg({
+        name: org.name,
+        accountId: org.accountId,
+        clientId: org.clientId,
+        clientSecret: org.clientSecret,
+        scope: org.scope || "rest_webservices",
+        authMethod: "interactive",
+        redirectUri: org.redirectUri || ""
+      });
+    }
+    console.log(
+      `[INFO] Imported ${orgs.length} compan${orgs.length === 1 ? "y" : "ies"} from orgs.json into the database (one-time).`
+    );
+  } catch (error) {
+    console.log(`[WARN] Could not import orgs.json: ${error.message}`);
+  }
+}
+migrateOrgsJsonIfNeeded();
 
 backfillAndFlushExports();
 // Files only need checking a few times a day for the 3-day window to be
