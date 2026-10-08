@@ -18,7 +18,11 @@ const TYPES = [
   { id: "vendorpayment", name: "Vendor payments" },
   { id: "customerpayment", name: "Customer payments" },
   { id: "depositapplication", name: "Deposit applications" },
-  { id: "journalentry", name: "Journal entries" }
+  { id: "journalentry", name: "Journal entries" },
+  { id: "invoice", name: "Invoices" },
+   { id: "vendorbill", name: "Vendor bills" },
+{ id: "vendorcredit", name: "Vendor credits" },
+{ id: "creditmemo", name: "Credit memos" }
 ];
 function typeById(id) {
   return TYPES.find((t) => t.id === id);
@@ -227,7 +231,11 @@ const PAYMENT_TYPE_LABELS = {
   vendorpayment: "Vendor Payments",
   customerpayment: "Customer Payments",
   depositapplication: "Deposit Applications",
-  journalentry: "Journal Entries"
+  journalentry: "Journal Entries",
+  invoice: "Invoices",
+  vendorbill: "Vendor Bills",
+vendorcredit: "Vendor Credits",
+creditmemo: "Credit Memos"
 };
 function friendlyFileLabel(name) {
   const lower = name.toLowerCase();

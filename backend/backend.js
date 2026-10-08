@@ -45,7 +45,11 @@ const ALLOWED_PAYMENT_TYPES = new Set([
   "vendorpayment",
   "customerpayment",
   "depositapplication",
-  "journalentry"
+  "journalentry",
+  "invoice",
+  "vendorbill",
+  "vendorcredit",
+  "creditmemo"
 ]);
 
 app.use((req, res, next) => {

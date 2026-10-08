@@ -193,10 +193,63 @@ const JOURNAL_COLUMNS = [
   "recordType"
 ];
 
+
+const INVOICE_COLUMNS = [
+  "id", "tranId", "transactionNumber", "otherRefNum",
+  "tranDate", "dueDate", "startDate", "endDate", "createdDate", "lastModifiedDate",
+  "status_refName",
+  "entity_id", "entity_refName",
+  "subsidiary_id", "subsidiary_refName",
+  "location_refName", "postingPeriod_refName", "terms_refName",
+  "currency_refName", "exchangeRate",
+  "subtotal", "discountTotal", "taxRate", "taxItem_refName", "total",
+  "amountPaid", "amountRemaining",
+  "account_id", "account_refName",
+  "email", "memo", "message",
+  "bill_attention", "bill_addressee", "bill_addr1", "bill_addr2",
+  "bill_city", "bill_state", "bill_zip", "bill_country",
+  "custbody_report_timestamp",
+  "line_index", "line_item_id", "line_item_refName", "line_itemType_refName",
+  "line_description", "line_quantity", "line_rate", "line_amount",
+  "line_isTaxable", "line_unique_key"
+];
+
+const VENDORBILL_COLUMNS = [
+  "id", "tranId", "transactionNumber",
+  "tranDate", "dueDate", "createdDate", "lastModifiedDate",
+  "status_refName", "approvalStatus_refName",
+  "entity_id", "entity_refName",
+  "subsidiary_id", "subsidiary_refName",
+  "location_refName", "postingPeriod_refName", "terms_refName",
+  "currency_refName", "exchangeRate",
+  "userTotal", "amountPaid", "amountRemaining",
+  "account_id", "account_refName",
+  "memo",
+  "line_kind", "line_index",
+  "line_item_id", "line_item_refName",
+  "line_account_id", "line_account_refName",
+  "line_description", "line_quantity", "line_rate", "line_amount",
+  "line_department_refName", "line_class_refName", "line_location_refName"
+];
+
+const VENDORCREDIT_COLUMNS = [...VENDORBILL_COLUMNS, "applied", "unapplied"];
+const CREDITMEMO_COLUMNS = [...INVOICE_COLUMNS, "applied", "unapplied"];
+
+// function getColumnsForType(paymentType) {
+//   if (String(paymentType || "").toLowerCase() === "journalentry") {
+//     return JOURNAL_COLUMNS;
+//   }
+//   return OUTPUT_MODE === "full" ? ALL_COLUMNS : ACCOUNTING_COLUMNS;
+// } 
+
+
 function getColumnsForType(paymentType) {
-  if (String(paymentType || "").toLowerCase() === "journalentry") {
-    return JOURNAL_COLUMNS;
-  }
+  const t = String(paymentType || "").toLowerCase();
+  if (t === "journalentry") return JOURNAL_COLUMNS;
+  if (t === "invoice") return INVOICE_COLUMNS;
+  if (t === "vendorbill") return VENDORBILL_COLUMNS;
+  if (t === "vendorcredit") return VENDORCREDIT_COLUMNS;
+  if (t === "creditmemo") return CREDITMEMO_COLUMNS;
   return OUTPUT_MODE === "full" ? ALL_COLUMNS : ACCOUNTING_COLUMNS;
 }
 
@@ -207,13 +260,20 @@ const RECORDTYPE_TO_TXTYPE = {
   customerpayment: "CustPymt",
   customerdeposit: "CustDep",
   depositapplication: "DepAppl",
-  journalentry: "Journal"
+  journalentry: "Journal",
+  invoice: "CustInvc",
+  vendorbill: "VendBill",
+vendorcredit: "VendCred",
+creditmemo: "CustCred",
 };
 
 const RECORDTYPE_TO_RECORD_API = {
   journalentry: "journalEntry",
   advintercompanyjournalentry: "advInterCompanyJournalEntry",
-  intercompanyjournalentry: "interCompanyJournalEntry"
+  intercompanyjournalentry: "interCompanyJournalEntry",
+  vendorbill: "vendorBill",
+vendorcredit: "vendorCredit",
+creditmemo: "creditMemo",
 };
 
 const oauth = OAuth({
@@ -323,20 +383,27 @@ function buildRow(data, columns) {
   if (normalized.account === undefined && normalized.arAcct !== undefined) {
     normalized.account = normalized.arAcct;
   }
+  // const refFields = [
+  //   "account",
+  //   "customer",
+  //   "subsidiary",
+  //   "currency",
+  //   "location",
+  //   "deposit",
+  //   "postingPeriod",
+  //   "line_account",
+  //   "line_name",
+  //   "line_department",
+  //   "line_location",
+  //   "line_class"
+  // ];
   const refFields = [
-    "account",
-    "customer",
-    "subsidiary",
-    "currency",
-    "location",
-    "deposit",
-    "postingPeriod",
-    "line_account",
-    "line_name",
-    "line_department",
-    "line_location",
-    "line_class"
-  ];
+  "account", "customer", "subsidiary", "currency", "location", "deposit",
+  "postingPeriod", "line_account", "line_name", "line_department",
+  "line_location", "line_class",
+  "entity", "terms", "status", "taxItem", "line_item", "line_itemType",
+  "approvalStatus"
+];
   for (const field of refFields) {
     const ref = normalized[field];
     if (ref && typeof ref === "object" && !Array.isArray(ref)) {
@@ -881,6 +948,82 @@ function buildJournalRows(detailData, columns) {
   return rows;
 }
 
+
+function buildInvoiceRows(detailData, columns) {
+  const b = detailData.billingAddress || {};
+  const base = {
+    ...detailData,
+    bill_attention: b.attention ?? "",
+    bill_addressee: b.addressee ?? "",
+    bill_addr1: b.addr1 ?? "",
+    bill_addr2: b.addr2 ?? "",
+    bill_city: b.city ?? "",
+    bill_state: b.state ?? "",
+    bill_zip: b.zip ?? "",
+    bill_country: b.country?.refName ?? ""
+  };
+  const lineItems = Array.isArray(detailData?.item?.items) ? detailData.item.items : [];
+  if (!lineItems.length) return [buildRow(base, columns)];
+
+  return lineItems.map((line) =>
+    buildRow(
+      {
+        ...base,
+        line_index: line.line ?? "",
+        line_item: line.item || null,
+        line_itemType: line.itemType || null,
+        line_description: line.description ?? "",
+        line_quantity: line.quantity ?? "",
+        line_rate: line.rate ?? "",
+        line_amount: line.amount ?? "",
+        line_isTaxable: line.isTaxable ?? "",
+        line_unique_key: line.lineUniqueKey ?? ""
+      },
+      columns
+    )
+  );
+} 
+
+
+function buildVendorBillRows(detailData, columns) {
+  const base = { ...detailData };
+  const rows = [];
+
+  const expenseLines = Array.isArray(detailData?.expense?.items) ? detailData.expense.items : [];
+  expenseLines.forEach((line, i) => {
+    rows.push(buildRow({
+      ...base,
+      line_kind: "expense",
+      line_index: line.line ?? i + 1,
+      line_account: line.account || null,
+      line_description: line.memo ?? "",
+      line_amount: line.amount ?? "",
+      line_department: line.department || null,
+      line_class: line.class || null,
+      line_location: line.location || null
+    }, columns));
+  });
+
+  const itemLines = Array.isArray(detailData?.item?.items) ? detailData.item.items : [];
+  itemLines.forEach((line, i) => {
+    rows.push(buildRow({
+      ...base,
+      line_kind: "item",
+      line_index: line.line ?? i + 1,
+      line_item: line.item || null,
+      line_description: line.description ?? "",
+      line_quantity: line.quantity ?? "",
+      line_rate: line.rate ?? "",
+      line_amount: line.amount ?? "",
+      line_department: line.department || null,
+      line_class: line.class || null,
+      line_location: line.location || null
+    }, columns));
+  });
+
+  return rows.length ? rows : [buildRow(base, columns)];
+}
+
 function detectDifferentRecordTypeError(respData) {
   const details = Array.isArray(respData?.["o:errorDetails"]) ? respData["o:errorDetails"] : [];
   for (const d of details) {
@@ -1028,6 +1171,18 @@ async function fetchPaymentDetail(paymentType, paymentId) {
   if (paymentType.toLowerCase() === "journalentry") {
     return buildJournalRows(detailData, columns);
   }
+
+  if (paymentType.toLowerCase() === "invoice") {
+    return buildInvoiceRows(detailData, columns);
+  }
+
+  const ptLower = paymentType.toLowerCase();
+if (ptLower === "invoice" || ptLower === "creditmemo") {
+  return buildInvoiceRows(detailData, columns);
+}
+if (ptLower === "vendorbill" || ptLower === "vendorcredit") {
+  return buildVendorBillRows(detailData, columns);
+}
 
   let applyItems = [];
   const needsApplyColumns = columns.some((c) => c.startsWith("apply_"));
@@ -1185,14 +1340,14 @@ async function exportPayments(paymentType) {
     : firstWrite
       ? 0
       : (() => {
-          try {
-            const existing = fs.readFileSync(filename, "utf8");
-            const lines = existing.split(/\r?\n/).filter(Boolean);
-            return Math.max(0, lines.length - 1);
-          } catch {
-            return 0;
-          }
-        })();
+        try {
+          const existing = fs.readFileSync(filename, "utf8");
+          const lines = existing.split(/\r?\n/).filter(Boolean);
+          return Math.max(0, lines.length - 1);
+        } catch {
+          return 0;
+        }
+      })();
   let sessionWritten = 0;
   // Distinguishes "ran out of records" (a real finish) from "could not reach
   // NetSuite" (internet dropped, auth died). Only a real finish may mark this
@@ -1228,7 +1383,7 @@ async function exportPayments(paymentType) {
       idFetchFailedAt = offset;
       console.log(
         `[ERROR] Could not reach NetSuite for ${paymentType} at offset=${offset}. ` +
-          `Stopping here and keeping progress so this can be resumed.`
+        `Stopping here and keeping progress so this can be resumed.`
       );
       break;
     }
@@ -1260,7 +1415,7 @@ async function exportPayments(paymentType) {
 
         if (outputBuffer.length >= WRITE_BATCH_SIZE) {
           if (!DISABLE_CSV_OUTPUT) {
-          await appendRowsToCsv(filename, outputBuffer, firstWrite, columns);
+            await appendRowsToCsv(filename, outputBuffer, firstWrite, columns);
           }
           totalWritten += outputBuffer.length;
           sessionWritten += outputBuffer.length;
@@ -1371,8 +1526,8 @@ async function exportPayments(paymentType) {
     requestIntervalMs = Math.max(MIN_REQUEST_INTERVAL_MS, baseInterval);
     throw new Error(
       `${paymentType}: lost connection to NetSuite at offset=${idFetchFailedAt}. ` +
-        `${totalWritten} row(s) already saved — run the same export again ` +
-        `(same company and same dates) to carry on from here.`
+      `${totalWritten} row(s) already saved — run the same export again ` +
+      `(same company and same dates) to carry on from here.`
     );
   }
 
