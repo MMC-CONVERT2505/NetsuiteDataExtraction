@@ -49,9 +49,10 @@ function hasExport(fileName) {
 }
 
 function insertExport({ fileName, orgSlug, ext, sizeBytes, content, createdAt }) {
-  if (hasExport(fileName)) return false;
+  // A re-run of the same company/location/dates must replace the old file,
+  // never be silently discarded in favour of stale data.
   db.prepare(
-    `INSERT INTO exports (file_name, org_slug, ext, size_bytes, content, created_at)
+    `INSERT OR REPLACE INTO exports (file_name, org_slug, ext, size_bytes, content, created_at)
      VALUES (?, ?, ?, ?, ?, ?)`
   ).run(fileName, orgSlug, ext, sizeBytes, content, createdAt);
   return true;

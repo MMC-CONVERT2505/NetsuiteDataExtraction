@@ -1043,7 +1043,9 @@ app.post("/api/export", async (req, res) => {
     const jobId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const logs = [];
     const orgSlug = slugify(orgName);
-    const runTag = `${orgSlug}_${startDate}_${endDate}`
+    // farmId (subsidiary/location) must be part of the key, otherwise two
+    // locations of one company with the same dates share files and progress.
+    const runTag = `${orgSlug}_${farmId ? `farm${farmId}` : "all"}_${startDate}_${endDate}`
       .replace(/[^a-zA-Z0-9_\-]+/g, "_");
 
     const conflictingJobId = findRunningJobByRunTag(runTag);
@@ -1269,7 +1271,9 @@ app.post("/api/runtime/export", async (req, res) => {
     const jobId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const logs = [];
     const orgSlug = slugify(orgName);
-    const runTag = `${orgSlug}_${startDate}_${endDate}`
+    // farmId (subsidiary/location) must be part of the key, otherwise two
+    // locations of one company with the same dates share files and progress.
+    const runTag = `${orgSlug}_${farmId ? `farm${farmId}` : "all"}_${startDate}_${endDate}`
       .replace(/[^a-zA-Z0-9_\-]+/g, "_");
 
     const conflictingJobId = findRunningJobByRunTag(runTag);
